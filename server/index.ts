@@ -83,6 +83,14 @@ app.use((req, res, next) => {
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
+  // Backstop only. Every known async path handles its own errors; this exists so
+  // that an unhandled one degrades into a log line and an unhealthy probe rather
+  // than a dead kiosk in front of a guest. The container orchestrator decides
+  // whether to replace us, based on /api/health.
+  process.on("unhandledRejection", (reason: any) => {
+    log(`unhandled rejection: ${reason?.message ?? reason}`, "fatal");
+  });
+
   const port = parseInt(process.env.PORT || "5000", 10);
   httpServer.listen(
     {
