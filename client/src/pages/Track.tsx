@@ -328,7 +328,8 @@ function Player({ track, claimCode }: { track: PublicTrack; claimCode: string })
       <div className="mt-7 flex items-center gap-3 rounded-xl border border-card-border bg-card p-5">
         <ScoreMark className="h-7 w-7 shrink-0 text-hue" />
         <p className="text-sm text-muted-foreground">
-          Yours to keep. Save it now — the file stays available here for 14 days.
+          Yours to keep. Save it to your phone, or come back to this link — we hold
+          it for a year, then delete it.
         </p>
       </div>
     </div>

@@ -180,7 +180,9 @@ export async function getTaskResult(taskId: string): Promise<TaskResult> {
     // `first.prompt` is an echo of our own input, NOT a lyric sheet — never map
     // it here or the attendee is shown the instructions we sent the model.
     lyrics: first?.lyrics ?? undefined,
-    durationSec: first?.duration ? Math.round(Number(first.duration)) : undefined,
+    // Floor, not round: the <audio> element reports whole seconds elapsed, so
+    // rounding up makes the credits disagree with the player by a second.
+    durationSec: first?.duration ? Math.floor(Number(first.duration)) : undefined,
   };
 }
 
