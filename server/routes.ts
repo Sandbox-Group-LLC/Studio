@@ -5,7 +5,7 @@ import { createTrackSchema, type PublicTrack, type Track } from "@shared/schema"
 import { getObject, isConfigured, checkAccess, RETENTION_DAYS } from "./objects";
 import { startHousekeeping, retryUningested } from "./ingest";
 import { composePrompt, cleanName, PRESETS } from "@shared/presets";
-import { createMusicTask, getCredits } from "./kie";
+import { createMusicTask, getCredits, transport } from "./kie";
 import { startPoller } from "./poller";
 import { log } from "./log";
 
@@ -57,6 +57,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
 
     out.storage = !isConfigured() ? "not configured" : (await checkAccess()).ok ? "ok" : "unreachable";
+
+    // Which credential transport is live. Names the mechanism, never the key —
+    // this endpoint is polled by infrastructure and shows up in logs.
+    const t = transport();
+    out.musicApi = t;
+    if (t === "none") out.ok = false;
 
     res.status(out.ok ? 200 : 503).json(out);
   });

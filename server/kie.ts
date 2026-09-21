@@ -3,7 +3,9 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
-const API_ORIGIN = "https://api.kie.ai";
+// Overridable so the transport can be pointed at a mock or a corporate proxy
+// without touching code. Defaults to the real provider.
+const API_ORIGIN = process.env.KIE_API_ORIGIN?.replace(/\/$/, "") || "https://api.kie.ai";
 const CREATE_PATH = "/api/v1/jobs/createTask";
 const RECORD_PATH = "/api/v1/jobs/recordInfo";
 const CREDIT_PATH = "/api/v1/chat/credit";
@@ -21,9 +23,32 @@ const MODEL = "ai-music-api/generate";
  *
  * Either way the provider key itself never exists in this codebase.
  */
+const API_KEY = process.env.KIE_API_KEY;
 const PASS_THROUGH_URL = process.env.CUSTOM_CRED_API_KIE_AI_URL;
 const PASS_THROUGH_KEY = process.env.CUSTOM_CRED_API_KIE_AI_PROXY_AUTH_KEY;
-const USE_PASS_THROUGH = Boolean(PASS_THROUGH_URL && PASS_THROUGH_KEY);
+const USE_PASS_THROUGH = !API_KEY && Boolean(PASS_THROUGH_URL && PASS_THROUGH_KEY);
+
+/** Which transport is active. Surfaced on the operator dashboard and at boot. */
+export function transport(): "direct" | "pass-through" | "none" {
+  if (API_KEY) return "direct";
+  if (USE_PASS_THROUGH) return "pass-through";
+  return "none";
+}
+
+/**
+ * Fail loudly at boot rather than at the first guest.
+ *
+ * Without a key the requests below go out unauthenticated and the provider
+ * answers 401 — which would present on the floor as every single track failing
+ * for no visible reason. Better to say so while someone is still looking at a
+ * terminal.
+ */
+if (transport() === "none") {
+  console.warn(
+    "[kie] No KIE_API_KEY set. Music generation will fail with 401 unless an " +
+      "authenticating proxy is in front of this process.",
+  );
+}
 
 /** Resolves an API path to a callable URL for whichever transport is active. */
 function endpoint(path: string): string {
@@ -35,7 +60,9 @@ function endpoint(path: string): string {
 
 /** Auth headers required by the active transport, as curl arguments. */
 function authArgs(): string[] {
-  return USE_PASS_THROUGH ? ["-H", `x-api-key: ${PASS_THROUGH_KEY}`] : [];
+  if (API_KEY) return ["-H", `Authorization: Bearer ${API_KEY}`];
+  if (USE_PASS_THROUGH) return ["-H", `x-api-key: ${PASS_THROUGH_KEY}`];
+  return [];
 }
 
 /**
