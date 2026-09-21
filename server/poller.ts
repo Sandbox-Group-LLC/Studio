@@ -68,6 +68,13 @@ async function tick() {
         log(`poll error for ${track.claimCode}: ${err?.message}`, "poller");
       }
     }
+  } catch (err: any) {
+    // The whole tick, not just one track. `listPending()` reaching a database
+    // that is briefly unreachable used to reject straight out of the timer
+    // callback, which Node treats as an unhandled rejection and kills the
+    // process. A kiosk mid-show must survive a database blip, so the tick logs
+    // and the next one retries.
+    log(`tick failed: ${err?.message}`, "poller");
   } finally {
     running = false;
   }

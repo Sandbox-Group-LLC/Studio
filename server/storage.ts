@@ -25,6 +25,16 @@ export const pool = new Pool({
   connectionTimeoutMillis: 10_000,
 });
 
+/**
+ * Without this, an error on an *idle* pooled client is an unhandled 'error'
+ * event, which takes the whole process down. Neon's pooler drops idle
+ * connections routinely, so this is a normal Tuesday, not an emergency — log it
+ * and let the pool replace the client.
+ */
+pool.on("error", (err) => {
+  console.error(`[db] idle client error: ${err.message}`);
+});
+
 export const db = drizzle(pool);
 
 export interface IStorage {
