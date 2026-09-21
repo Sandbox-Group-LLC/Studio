@@ -32,6 +32,35 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   startHousekeeping();
 
   /** Creative config, so the kiosk UI is driven entirely by shared/presets.ts. */
+  /**
+   * Container health probe.
+   *
+   * Deliberately checks the database rather than just returning 200. A process
+   * that is listening but cannot reach Postgres is useless to a kiosk, and a
+   * probe that only proves "node is alive" would keep routing guests to it.
+   * Storage is reported but never fails the probe — the app degrades to
+   * proxying provider audio, so a bad bucket should not take the show down.
+   */
+  app.get("/api/health", async (_req, res) => {
+    const out: Record<string, unknown> = { ok: true, uptimeSec: Math.floor(process.uptime()) };
+
+    try {
+      await storage.listTracks(1);
+      out.db = "ok";
+    } catch (err: any) {
+      out.ok = false;
+      // Drizzle wraps driver errors and puts the whole failing SQL statement in
+      // `message`. The underlying cause is the useful part; echoing the query
+      // just dumps our schema into an endpoint a load balancer polls.
+      const reason = err?.cause?.message ?? err?.message ?? "unreachable";
+      out.db = String(reason).split("\n")[0].slice(0, 160);
+    }
+
+    out.storage = !isConfigured() ? "not configured" : (await checkAccess()).ok ? "ok" : "unreachable";
+
+    res.status(out.ok ? 200 : 503).json(out);
+  });
+
   app.get("/api/presets", (_req, res) => {
     res.json(PRESETS);
   });
