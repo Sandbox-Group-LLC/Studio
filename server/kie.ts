@@ -3,9 +3,40 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
-const CREATE_URL = "https://api.kie.ai/api/v1/jobs/createTask";
-const RECORD_URL = "https://api.kie.ai/api/v1/jobs/recordInfo";
+const API_ORIGIN = "https://api.kie.ai";
+const CREATE_PATH = "/api/v1/jobs/createTask";
+const RECORD_PATH = "/api/v1/jobs/recordInfo";
+const CREDIT_PATH = "/api/v1/chat/credit";
 const MODEL = "ai-music-api/generate";
+
+/**
+ * Two credential transports are supported, and which one is active depends on
+ * how the process was started — so both are handled rather than assumed.
+ *
+ * 1. Pass-through endpoint: a base URL plus a token. The target path is
+ *    appended to the base URL and the token goes out as `x-api-key`. This is
+ *    what a long-running server process receives.
+ * 2. Transparent HTTPS proxy: the real origin is called directly and auth is
+ *    injected in flight. No headers needed.
+ *
+ * Either way the provider key itself never exists in this codebase.
+ */
+const PASS_THROUGH_URL = process.env.CUSTOM_CRED_API_KIE_AI_URL;
+const PASS_THROUGH_KEY = process.env.CUSTOM_CRED_API_KIE_AI_PROXY_AUTH_KEY;
+const USE_PASS_THROUGH = Boolean(PASS_THROUGH_URL && PASS_THROUGH_KEY);
+
+/** Resolves an API path to a callable URL for whichever transport is active. */
+function endpoint(path: string): string {
+  if (USE_PASS_THROUGH) {
+    return `${PASS_THROUGH_URL!.replace(/\/$/, "")}${path}`;
+  }
+  return `${API_ORIGIN}${path}`;
+}
+
+/** Auth headers required by the active transport, as curl arguments. */
+function authArgs(): string[] {
+  return USE_PASS_THROUGH ? ["-H", `x-api-key: ${PASS_THROUGH_KEY}`] : [];
+}
 
 /**
  * All outbound calls go through `curl` rather than Node's global fetch.
@@ -53,7 +84,7 @@ export async function createMusicTask(p: CreateTaskParams): Promise<string> {
     },
   };
 
-  const json = await curlWithBody(CREATE_URL, JSON.stringify(body));
+  const json = await curlWithBody(endpoint(CREATE_PATH), JSON.stringify(body));
 
   const taskId = json?.data?.taskId;
   if (!taskId) {
@@ -72,6 +103,7 @@ async function curlWithBody(url: string, body: string): Promise<any> {
     "-X",
     "POST",
     url,
+    ...authArgs(),
     "-H",
     "Content-Type: application/json",
     "--data-binary",
@@ -113,7 +145,10 @@ export interface TaskResult {
  * market models use a flat `resultUrls` array — both shapes are handled.
  */
 export async function getTaskResult(taskId: string): Promise<TaskResult> {
-  const json = await curlJson([`${RECORD_URL}?taskId=${encodeURIComponent(taskId)}`]);
+  const json = await curlJson([
+    `${endpoint(RECORD_PATH)}?taskId=${encodeURIComponent(taskId)}`,
+    ...authArgs(),
+  ]);
   const data = json?.data ?? {};
   const state: TaskState = data.state ?? "generating";
 
@@ -142,7 +177,9 @@ export async function getTaskResult(taskId: string): Promise<TaskResult> {
     audioUrl,
     streamUrl: first?.streamAudioUrl ?? first?.stream_audio_url ?? undefined,
     imageUrl: first?.imageUrl ?? first?.image_url ?? undefined,
-    lyrics: first?.prompt ?? first?.lyrics ?? undefined,
+    // `first.prompt` is an echo of our own input, NOT a lyric sheet — never map
+    // it here or the attendee is shown the instructions we sent the model.
+    lyrics: first?.lyrics ?? undefined,
     durationSec: first?.duration ? Math.round(Number(first.duration)) : undefined,
   };
 }
@@ -150,7 +187,7 @@ export async function getTaskResult(taskId: string): Promise<TaskResult> {
 /** Remaining account credits — surfaced on the operator dashboard. */
 export async function getCredits(): Promise<number | null> {
   try {
-    const json = await curlJson(["https://api.kie.ai/api/v1/chat/credit"]);
+    const json = await curlJson([endpoint(CREDIT_PATH), ...authArgs()]);
     const v = json?.data;
     return typeof v === "number" ? v : typeof v?.credit === "number" ? v.credit : null;
   } catch {

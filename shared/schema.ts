@@ -64,7 +64,9 @@ export interface PublicTrack {
   audioUrl: string | null;
   streamUrl: string | null;
   imageUrl: string | null;
-  lyrics: string | null;
+  /** Human-readable production descriptor, shown as credits on the phone. */
+  style: string;
+  durationSec: number | null;
   firstName: string | null;
   goal: string | null;
   createdAt: number;

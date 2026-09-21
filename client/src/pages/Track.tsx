@@ -290,14 +290,38 @@ function Player({ track, claimCode }: { track: PublicTrack; claimCode: string })
         </div>
       </div>
 
-      {track.lyrics && (
+      {/* Production credits. The provider returns no lyric sheet, so this shows
+          the real style direction behind the track instead of an empty panel. */}
+      {track.style && (
         <div className="mt-7 rounded-xl border border-card-border bg-card p-6">
-          <div className="mb-4 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-            Your lyrics
+          <div className="mb-4 flex items-baseline justify-between gap-4">
+            <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+              How it was made
+            </span>
+            {track.durationSec ? (
+              <span
+                className="font-mono text-[11px] tracking-[0.12em] text-muted-foreground"
+                data-testid="text-duration"
+              >
+                {Math.floor(track.durationSec / 60)}:
+                {String(track.durationSec % 60).padStart(2, "0")}
+              </span>
+            ) : null}
           </div>
-          <pre className="whitespace-pre-wrap font-sans text-base leading-relaxed text-foreground/85">
-            {track.lyrics}
-          </pre>
+          <div className="flex flex-wrap gap-2">
+            {track.style
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
+              .map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full border border-card-border bg-background px-3 py-1.5 text-xs text-foreground/80"
+                >
+                  {tag}
+                </span>
+              ))}
+          </div>
         </div>
       )}
 
