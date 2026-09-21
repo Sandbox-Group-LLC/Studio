@@ -19,6 +19,7 @@ function toPublic(t: Track): PublicTrack {
     streamUrl: t.streamUrl,
     imageUrl: t.imageUrl,
     style: t.style,
+    lyrics: t.lyrics,
     durationSec: t.durationSec,
     firstName: t.firstName,
     goal: t.goal,
