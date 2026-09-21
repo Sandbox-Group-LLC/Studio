@@ -1,3 +1,39 @@
+/*
+ * Fonts are served from this app, not from Google's CDN.
+ *
+ * The kiosk runs on venue wifi, which is the least reliable network this
+ * product will ever touch. A blocked or slow font CDN would leave a guest
+ * looking at fallback Georgia on their souvenir. These are the latin subsets
+ * only, four files replaced by two, and the previous <link> pulled twenty-six
+ * families to use two of them.
+ *
+ * Newsreader is variable across weight 200-800, so one file covers every weight
+ * the interface uses.
+ */
+@font-face {
+  font-family: "Newsreader";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/fonts/newsreader-latin-var.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/plexmono-latin-400.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/plexmono-latin-500.woff2") format("woff2");
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -344,8 +380,9 @@
   --destructive-foreground: 0 0% 100%;
   --input: 0 0% 22%;
   --ring: 122 100% 41%;
-  --font-sans: 'Space Grotesk', 'DM Sans', sans-serif;
-  --font-mono: 'IBM Plex Mono', monospace;
+  --font-sans: 'Newsreader', Georgia, serif;
+  --font-serif: 'Newsreader', Georgia, serif;
+  --font-mono: 'IBM Plex Mono', Menlo, monospace;
   --radius: 0.75rem;
   --elevate-1: rgba(255, 255, 255, 0.04);
   --elevate-2: rgba(255, 255, 255, 0.09);

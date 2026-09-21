@@ -300,7 +300,11 @@ function Player({ track, claimCode }: { track: PublicTrack; claimCode: string })
             The words
           </span>
           <pre
-            className="mt-4 whitespace-pre-wrap font-sans text-[15px] leading-relaxed text-foreground/90"
+            /* Hanging indent: a lyric line too long for the phone wraps with
+               its continuation tucked in, so it still reads as one sung line
+               rather than two. */
+            className="mt-4 whitespace-pre-wrap pl-4 -indent-4 font-sans text-[15px] leading-relaxed text-foreground/90"
+            style={{ textWrap: "pretty" } as React.CSSProperties}
             data-testid="text-lyrics"
           >
             {track.lyrics}
