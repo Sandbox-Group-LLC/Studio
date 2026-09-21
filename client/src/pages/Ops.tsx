@@ -24,6 +24,15 @@ interface OpsResponse {
  * booth can answer "where is my song?" in one look, and fix a failure without
  * making the guest start over.
  */
+interface StorageHealth {
+  configured: boolean;
+  ok: boolean;
+  detail: string;
+  readyCount: number;
+  storedCount: number;
+  retentionDays: number;
+}
+
 export default function Ops() {
   const [q, setQ] = useState("");
   const [retrying, setRetrying] = useState<string | null>(null);
@@ -36,6 +45,11 @@ export default function Ops() {
   const { data: credits } = useQuery<{ credits: number | null }>({
     queryKey: ["/api/ops/credits"],
     refetchInterval: 60000,
+  });
+
+  const { data: store } = useQuery<StorageHealth>({
+    queryKey: ["/api/ops/storage"],
+    refetchInterval: 30000,
   });
 
   const retry = async (code: string) => {
@@ -71,6 +85,26 @@ export default function Ops() {
             <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
               Floor operations
             </div>
+            {store && (
+              <span
+                className="flex items-center gap-2 rounded-full border border-border px-3 py-1.5 font-mono text-[11px] text-muted-foreground"
+                title={store.detail}
+                data-testid="chip-storage"
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    !store.configured
+                      ? "bg-muted-foreground"
+                      : store.ok && store.storedCount === store.readyCount
+                        ? "bg-primary"
+                        : "bg-destructive"
+                  }`}
+                />
+                {!store.configured
+                  ? "No storage"
+                  : `Saved ${store.storedCount}/${store.readyCount}`}
+              </span>
+            )}
             <span className="flex items-center gap-2 rounded-full border border-border px-3 py-1.5 font-mono text-[11px] text-muted-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-primary" /> Live
             </span>
