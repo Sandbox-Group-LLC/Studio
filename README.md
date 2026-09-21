@@ -1,0 +1,1 @@
+Just as Robinhood disrupted Wall Street by giving retail investors the tools to control their financial destiny, Suno disrupted the music industry by giving everyday users the tools to compose high-quality music without needing a traditional studio, a label, or formal training. In both cases, the barrier to entry is obliterated, turning passive consumers into active creators.
