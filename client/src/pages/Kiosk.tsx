@@ -19,7 +19,7 @@ const TICKER = [
   "HUSTLER",
   "LEGACY",
   "YOUR GOALS, SCORED",
-  "2 MINUTES, ONE TRACK",
+  "ONE TRACK, ALL YOURS",
 ];
 
 export default function Kiosk() {
@@ -217,7 +217,7 @@ function Attract({ onStart }: { onStart: () => void }) {
       </h1>
 
       <p className="mt-7 max-w-2xl text-lg text-muted-foreground md:text-xl">
-        Four taps turns the way you invest into an original two-minute track. Yours to keep.
+        Four taps turns the way you invest into an original track. Yours to keep.
       </p>
 
       <span className="mt-14 inline-flex items-center gap-3 rounded-full bg-hue px-9 py-4 text-base font-semibold text-background transition-transform duration-200 group-active:scale-[0.97]">
