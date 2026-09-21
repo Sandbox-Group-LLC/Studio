@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { pgTable, text, integer, serial, bigint } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -7,8 +7,8 @@ import { z } from "zod";
  * kiosk handoff screen and encoded in the QR — it is the only identifier the
  * attendee's phone ever sees, so the numeric id is never exposed.
  */
-export const tracks = sqliteTable("tracks", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const tracks = pgTable("tracks", {
+  id: serial("id").primaryKey(),
   claimCode: text("claim_code").notNull().unique(),
 
   // What the attendee tapped
@@ -35,8 +35,19 @@ export const tracks = sqliteTable("tracks", {
   errorMessage: text("error_message"),
 
   kioskId: text("kiosk_id").notNull().default("booth-1"),
-  createdAt: integer("created_at").notNull(),
-  readyAt: integer("ready_at"),
+
+  // Objects in our own bucket. Authoritative once set: the provider's URLs
+  // expire in ~24h and its media retention is ~14 days, so a track is only
+  // truly ours once these keys are populated.
+  audioKey: text("audio_key"),
+  imageKey: text("image_key"),
+  storedAt: bigint("stored_at", { mode: "number" }),
+
+  /** Epoch ms after which this row and its objects must be deleted. */
+  purgeAfter: bigint("purge_after", { mode: "number" }),
+
+  createdAt: bigint("created_at", { mode: "number" }).notNull(),
+  readyAt: bigint("ready_at", { mode: "number" }),
 });
 
 export const createTrackSchema = z.object({
