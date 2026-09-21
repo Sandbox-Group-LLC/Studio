@@ -77,6 +77,14 @@ export interface PublicTrack {
   imageUrl: string | null;
   /** Human-readable production descriptor, shown as credits on the phone. */
   style: string;
+  /**
+   * The sung lyrics, or null.
+   *
+   * Only ever populated by a guard that rejects text which is merely our own
+   * prompt echoed back — a guest's souvenir once displayed our creative brief
+   * because this field was trusted blindly.
+   */
+  lyrics: string | null;
   durationSec: number | null;
   firstName: string | null;
   goal: string | null;
