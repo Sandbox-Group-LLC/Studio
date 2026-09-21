@@ -40,9 +40,15 @@ hourly sweep removes the objects, or call the same path directly.
 
 ## IAM
 
-Use a **dedicated IAM user scoped to this one bucket**. Do not reuse an existing
-key. The blast radius should be one bucket of event audio, and the user should be
-deletable the moment the activation is over.
+Access should be **scoped to this one bucket and nothing else**. The blast radius
+should be one bucket of event audio, revocable the moment the activation is over.
+
+**Current state:** the grant is attached to the existing `sandbox-erp` principal
+(`arn:aws:iam::562887205506:user/sandbox-erp`), confined to the `tracks/*` prefix.
+That is fine for development. Before the event, move to a **dedicated principal**
+used only by this app — sharing `sandbox-erp` with other tooling means you cannot
+revoke one without breaking the others, and it makes the access log useless for
+telling which system touched an attendee's file.
 
 ```json
 {
@@ -91,3 +97,46 @@ provider. The operator dashboard shows "No storage" rather than a green
 `Saved n/n`, so the gap is visible to the host instead of silent. A silent ingest
 failure is the dangerous case — it looks fine all show and surfaces days later as
 dead links.
+
+## Verified
+
+Checked against `amzn-s3-studio` (us-east-1) on 2026-09-20, after the prefix
+policy was attached.
+
+| Check | Result |
+| --- | --- |
+| `s3:PutObject` to `tracks/8C9HX2/audio.mp3` | Succeeded — previously `AccessDenied` |
+| Read back | 2,846,810 bytes, `Content-Type: audio/mpeg`, 119.88s at ~190kbps |
+| `Range: bytes=0-1023` | `206 Partial Content`, `Content-Range: bytes 0-1023/2846810` |
+| Prefix scoping | Writes confined to `tracks/*` |
+| No-bucket fallback | App runs, proxies from provider, dashboard reads `No storage` |
+
+The range check is the one that mattered. Mobile Safari refuses audio sources
+that cannot serve partial content, so a store that returns only `200 OK` would
+work on every desktop test rig and fail on every iPhone at the event — which is
+the whole audience.
+
+**Not yet exercised:** the app's own ingest path. The verification above was done
+out-of-band, because S3 authenticates with SigV4 request signing and the
+development sandbox has no AWS credentials in its environment. What is proven is
+the bucket, the policy, and the key layout; what remains is running the same
+operations from the app's own credentials.
+
+## Deploy credentials
+
+`server/objects.ts` reads standard AWS environment configuration, so no code
+changes are needed for any of these. Setting `S3_BUCKET` with credentials present
+is the entire switch.
+
+In order of preference:
+
+1. **Instance or task role** on the host that runs the app. No secret exists to
+   leak, rotate, or accidentally commit. This is the right answer for the event.
+2. **A dedicated IAM user's access key** in the deploy environment, if roles are
+   not available. Scope it with the policy above and delete the user when the
+   activation ends.
+3. **Never** a broad or shared key. The app needs three actions on one prefix.
+
+Confirm on first boot by opening the operator dashboard: the header chip should
+read `Saved n/n` in green rather than `No storage`. If it reads red, the bucket is
+configured but unreachable — check the policy before assuming the code.
