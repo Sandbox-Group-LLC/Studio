@@ -43,6 +43,7 @@ nothing depends on the venue's network accepting inbound traffic.
 
 ```bash
 npm install
+cp .env.example .env   # then fill in DATABASE_URL
 npm run dev          # Express + Vite on http://localhost:5000
 ```
 
@@ -93,9 +94,10 @@ brand names, or anything resembling financial advice. Each preset also carries
   already scanned still works.
 - **Audio is proxied** through `/api/tracks/:code/audio` with byte-range support. Provider
   URLs expire in about 24 hours and mobile Safari refuses non-range audio sources.
-- **Media retention**: the provider keeps generated files roughly 14 days. For anything that
-  needs to outlive the show, download finished tracks to your own storage.
+- **Storage and retention**: finished tracks are copied into our own S3 bucket the moment
+  they are ready, because the provider's URLs expire in about 24 hours. Tracks are kept for
+  a year and then purged automatically. See [docs/storage.md](./docs/storage.md).
 
 ## Stack
 
-Express 5 · Vite · React 18 · Tailwind 3 · shadcn/ui · SQLite (Drizzle) · TypeScript
+Express 5 · Vite · React 18 · Tailwind 3 · shadcn/ui · Neon Postgres (Drizzle) · AWS S3 · TypeScript

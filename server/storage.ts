@@ -1,41 +1,31 @@
-import { tracks } from '@shared/schema';
-import type { Track, InsertTrack } from '@shared/schema';
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import Database from "better-sqlite3";
-import { eq, desc, inArray } from "drizzle-orm";
+import { tracks } from "@shared/schema";
+import type { Track, InsertTrack } from "@shared/schema";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+import { eq, desc, inArray, and, lt, isNotNull } from "drizzle-orm";
 
-const sqlite = new Database("data.db");
-sqlite.pragma("journal_mode = WAL");
-
-export const db = drizzle(sqlite);
-
-// Created eagerly so a fresh checkout boots without a separate migration step.
-sqlite.exec(`
-  CREATE TABLE IF NOT EXISTS tracks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    claim_code TEXT NOT NULL UNIQUE,
-    preset TEXT NOT NULL,
-    vibe TEXT NOT NULL,
-    angle TEXT NOT NULL,
-    first_name TEXT,
-    goal TEXT,
-    spin TEXT,
-    title TEXT NOT NULL,
-    style TEXT NOT NULL,
-    prompt TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'queued',
-    task_id TEXT,
-    audio_url TEXT,
-    stream_url TEXT,
-    image_url TEXT,
-    lyrics TEXT,
-    duration_sec INTEGER,
-    error_message TEXT,
-    kiosk_id TEXT NOT NULL DEFAULT 'booth-1',
-    created_at INTEGER NOT NULL,
-    ready_at INTEGER
+/**
+ * Postgres (Neon) rather than a local SQLite file, so several kiosks and the
+ * floor operator dashboard all read one shared queue. A file on one box means a
+ * second booth is invisible to the first and the host can't see the whole floor.
+ */
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error(
+    "DATABASE_URL is not set. Copy .env.example to .env and add the Neon connection string.",
   );
-`);
+}
+
+export const pool = new Pool({
+  connectionString,
+  // Kiosks are long-lived and mostly idle between guests; a small pool is plenty
+  // and keeps well clear of the pooler's connection ceiling.
+  max: 8,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 10_000,
+});
+
+export const db = drizzle(pool);
 
 export interface IStorage {
   createTrack(track: InsertTrack): Promise<Track>;
@@ -43,25 +33,34 @@ export interface IStorage {
   getTrackById(id: number): Promise<Track | undefined>;
   listTracks(limit?: number): Promise<Track[]>;
   listPending(): Promise<Track[]>;
+  listExpired(now?: number): Promise<Track[]>;
   updateTrack(id: number, patch: Partial<Track>): Promise<Track | undefined>;
+  deleteTrack(id: number): Promise<void>;
   claimCodeExists(code: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
   async createTrack(track: InsertTrack): Promise<Track> {
-    return db.insert(tracks).values(track as any).returning().get();
+    const [row] = await db.insert(tracks).values(track as any).returning();
+    return row;
   }
 
   async getTrackByClaimCode(code: string): Promise<Track | undefined> {
-    return db.select().from(tracks).where(eq(tracks.claimCode, code.toUpperCase())).get();
+    const [row] = await db
+      .select()
+      .from(tracks)
+      .where(eq(tracks.claimCode, code.toUpperCase()))
+      .limit(1);
+    return row;
   }
 
   async getTrackById(id: number): Promise<Track | undefined> {
-    return db.select().from(tracks).where(eq(tracks.id, id)).get();
+    const [row] = await db.select().from(tracks).where(eq(tracks.id, id)).limit(1);
+    return row;
   }
 
   async listTracks(limit = 200): Promise<Track[]> {
-    return db.select().from(tracks).orderBy(desc(tracks.id)).limit(limit).all();
+    return db.select().from(tracks).orderBy(desc(tracks.id)).limit(limit);
   }
 
   /** Jobs the poller still needs to watch. */
@@ -69,12 +68,31 @@ export class DatabaseStorage implements IStorage {
     return db
       .select()
       .from(tracks)
-      .where(inArray(tracks.status, ["queued", "generating"]))
-      .all();
+      .where(inArray(tracks.status, ["queued", "generating"]));
+  }
+
+  /**
+   * Tracks past their retention date. These hold an attendee's first name and
+   * stated financial goal, so purging on schedule is a commitment, not a chore.
+   */
+  async listExpired(now = Date.now()): Promise<Track[]> {
+    return db
+      .select()
+      .from(tracks)
+      .where(and(isNotNull(tracks.purgeAfter), lt(tracks.purgeAfter, now)));
   }
 
   async updateTrack(id: number, patch: Partial<Track>): Promise<Track | undefined> {
-    return db.update(tracks).set(patch as any).where(eq(tracks.id, id)).returning().get();
+    const [row] = await db
+      .update(tracks)
+      .set(patch as any)
+      .where(eq(tracks.id, id))
+      .returning();
+    return row;
+  }
+
+  async deleteTrack(id: number): Promise<void> {
+    await db.delete(tracks).where(eq(tracks.id, id));
   }
 
   async claimCodeExists(code: string): Promise<boolean> {

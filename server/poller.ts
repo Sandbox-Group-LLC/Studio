@@ -1,6 +1,7 @@
 import { storage } from "./storage";
 import { getTaskResult } from "./kie";
 import { log } from "./log";
+import { ingestTrack } from "./ingest";
 
 /**
  * Single background poller for every in-flight job.
@@ -37,7 +38,7 @@ async function tick() {
         const result = await getTaskResult(track.taskId);
 
         if (result.state === "success") {
-          await storage.updateTrack(track.id, {
+          const ready = await storage.updateTrack(track.id, {
             status: "ready",
             audioUrl: result.audioUrl ?? null,
             streamUrl: result.streamUrl ?? null,
@@ -47,6 +48,11 @@ async function tick() {
             readyAt: Date.now(),
           });
           log(`track ${track.claimCode} ready`, "poller");
+
+          // Copy the bytes into our own bucket immediately. Provider URLs expire
+          // in ~24h, so waiting for the attendee's first request can be too late.
+          // Not awaited: the guest's page must not wait on an upload.
+          if (ready) void ingestTrack(ready);
         } else if (result.state === "fail") {
           await storage.updateTrack(track.id, {
             status: "failed",
