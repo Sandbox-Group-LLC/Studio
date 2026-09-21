@@ -60,9 +60,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
     // Which credential transport is live. Names the mechanism, never the key —
     // this endpoint is polled by infrastructure and shows up in logs.
-    const t = transport();
-    out.musicApi = t;
-    if (t === "none") out.ok = false;
+    // Reported, never fatal — same rule as storage. A missing provider key means
+    // generation fails; it does not mean this container cannot serve. Failing the
+    // probe here got the container evicted from rotation, which took the whole
+    // site down and removed the very endpoint you would use to diagnose it.
+    // Only the database, which nothing works without, may fail this probe.
+    out.musicApi = transport();
 
     res.status(out.ok ? 200 : 503).json(out);
   });
