@@ -95,25 +95,35 @@ export interface CreateTaskParams {
   durationSec?: number;
 }
 
-/** Submits the generation job and returns the provider task id. */
+
+/**
+ * custom_mode false on purpose. In custom mode the provider treats `prompt`
+ * strictly as the lyric sheet and sings it verbatim — which is how a guest's
+ * souvenir once sang our own creative brief back at them. Here `prompt` is the
+ * core idea and the provider writes the lyrics.
+ */
+const CUSTOM_MODE = false;
+
 export async function createMusicTask(p: CreateTaskParams): Promise<string> {
-  const body = {
-    model: MODEL,
-    input: {
-      prompt: p.prompt,
-      style: p.style,
-      title: p.title,
-      // custom_mode false on purpose. In custom mode the provider treats
-      // `prompt` strictly as the lyric sheet and sings it verbatim — which is
-      // how a guest's souvenir once sang our own creative brief back at them.
-      // Here `prompt` is the core idea and the provider writes the lyrics.
-      custom_mode: false,
-      instrumental: false,
-      model: "V6",
-      negative_tags: p.negativeTags,
-      duration: p.durationSec ?? 120,
-    },
+  const input: Record<string, unknown> = {
+    prompt: p.prompt,
+    style: p.style,
+    title: p.title,
+    custom_mode: CUSTOM_MODE,
+    instrumental: false,
+    model: "V6",
+    negative_tags: p.negativeTags,
   };
+
+  // The provider rejects the whole request when `duration` is present outside
+  // custom mode: "duration is only supported when customMode is true". So it is
+  // sent only when it is legal, rather than always. Outside custom mode the
+  // model chooses the length, which has been landing around two minutes anyway.
+  if (CUSTOM_MODE) {
+    input.duration = p.durationSec ?? 120;
+  }
+
+  const body = { model: MODEL, input };
 
   const json = await curlWithBody(endpoint(CREATE_PATH), JSON.stringify(body));
 
