@@ -69,13 +69,13 @@ export const PRESETS: Preset[] = [
         id: "cosmos",
         label: "The Cosmos",
         blurb: "Moons, rockets, zero gravity",
-        lyric: "Lean on space imagery — moons, rockets, starlight, zero gravity, escape velocity",
+        lyric: "moons, rockets, starlight, zero gravity, escape velocity",
       },
       {
         id: "midnight",
         label: "The Midnight Trade",
         blurb: "Late-night, high-stakes adrenaline",
-        lyric: "Lean into the gritty adrenaline of the late-night market — glowing screens, sleepless conviction",
+        lyric: "glowing screens at 2am, sleepless conviction, the adrenaline of a market that never sleeps",
       },
     ],
     goals: [
@@ -116,13 +116,13 @@ export const PRESETS: Preset[] = [
         id: "long-game",
         label: "The Long Game",
         blurb: "Time, patience, steady growth",
-        lyric: "Center the lyrics on time and patience — seasons changing, steady compounding growth",
+        lyric: "seasons turning, patience, steady growth measured in years",
       },
       {
         id: "flow",
         label: "The Flow",
         blurb: "Rivers, valleys, rising tides",
-        lyric: "Use natural metaphors — rivers carving valleys, tides rising, roots going deep",
+        lyric: "rivers carving valleys, tides rising, roots going deep",
       },
     ],
     goals: [
@@ -163,13 +163,13 @@ export const PRESETS: Preset[] = [
         id: "maverick",
         label: "The Maverick",
         blurb: "Independence, calling your own shots",
-        lyric: "Center independence — breaking the traditional mold, calling your own shots, no permission needed",
+        lyric: "independence, breaking the mold, calling your own shots, needing nobody's permission",
       },
       {
         id: "horizon",
         label: "The Horizon",
         blurb: "Skylines, travel, freedom",
-        lyric: "Center the destination — skylines, travel, freedom, earned luxury",
+        lyric: "skylines, open roads, travel, freedom that was earned",
       },
     ],
     goals: [
@@ -210,13 +210,13 @@ export const PRESETS: Preset[] = [
         id: "foundation",
         label: "The Foundation",
         blurb: "Home, roots, family security",
-        lyric: "Center building a home, putting down roots, and family security",
+        lyric: "building a home, putting down roots, keeping the people you love safe",
       },
       {
         id: "next-chapter",
         label: "The Next Chapter",
         blurb: "Early retirement, freedom of time",
-        lyric: "Center early retirement, freedom of time, and starting a new life journey",
+        lyric: "time that finally belongs to you, an early exit, the start of a new chapter",
       },
     ],
     goals: [
@@ -274,30 +274,27 @@ export function composePrompt(recipe: Recipe): ComposedPrompt {
 
   const style = [preset.style, vibe.style].filter(Boolean).join(", ");
 
-  const direction: string[] = [preset.theme, angle.lyric ?? ""];
+  // The provider runs in non-custom mode, where this text is the song's *core
+  // idea* and it writes the lyrics itself. It must therefore read like a
+  // description of a song, never like instructions to a model.
+  //
+  // This is not a style preference. In custom mode the same field is used
+  // verbatim as the lyric sheet, which is exactly how a track once shipped
+  // singing "a big repeatable hook" and "use their name in the chorus" to a
+  // guest. Keep this prose.
+  const idea: string[] = [preset.theme];
 
-  if (name) {
-    direction.push(
-      `Address the listener directly by name: use the name "${name}" at least once in the chorus so the song feels written for them`,
-    );
-  }
-  if (recipe.goal) {
-    direction.push(`Their stated goal is "${recipe.goal}" — make that the emotional center of the chorus`);
-  }
-  if (recipe.spin) {
-    direction.push(`Personal detail to weave in: ${recipe.spin}`);
-  }
-
-  direction.push(
-    "Write real singable lyrics with a clear verse, pre-chorus, and a big repeatable hook. Keep it uplifting and specific, never generic corporate language. Do not mention Robinhood, tickers, brand names, or give financial advice",
-  );
+  if (angle.lyric) idea.push(`Imagery: ${angle.lyric}`);
+  if (name) idea.push(`Written for ${name}, and their name belongs in the chorus`);
+  if (recipe.goal) idea.push(`What they are working toward: ${recipe.goal}`);
+  if (recipe.spin) idea.push(`A detail that is theirs alone: ${recipe.spin}`);
 
   const title = name ? `${name}'s Score` : `The Score — ${preset.label}`;
 
   return {
     title: title.slice(0, 80),
     style: style.slice(0, 1000),
-    prompt: direction.filter(Boolean).join(". ").slice(0, 5000),
+    prompt: idea.filter(Boolean).join(". ").slice(0, 3000),
     negativeTags: preset.negativeTags,
   };
 }

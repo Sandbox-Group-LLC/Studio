@@ -290,8 +290,25 @@ function Player({ track, claimCode }: { track: PublicTrack; claimCode: string })
         </div>
       </div>
 
-      {/* Production credits. The provider returns no lyric sheet, so this shows
-          the real style direction behind the track instead of an empty panel. */}
+      {/* The words, when we have them.
+          Shown above the production credits because it is the song, not trivia
+          about it. Rendered only when the server's guard accepted the text as
+          real lyrics rather than our own prompt echoed back. */}
+      {track.lyrics && (
+        <div className="mt-7 rounded-xl border border-card-border bg-card p-6">
+          <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+            The words
+          </span>
+          <pre
+            className="mt-4 whitespace-pre-wrap font-sans text-[15px] leading-relaxed text-foreground/90"
+            data-testid="text-lyrics"
+          >
+            {track.lyrics}
+          </pre>
+        </div>
+      )}
+
+      {/* Production credits: the real style direction behind the track. */}
       {track.style && (
         <div className="mt-7 rounded-xl border border-card-border bg-card p-6">
           <div className="mb-4 flex items-baseline justify-between gap-4">

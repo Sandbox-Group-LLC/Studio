@@ -103,7 +103,11 @@ export async function createMusicTask(p: CreateTaskParams): Promise<string> {
       prompt: p.prompt,
       style: p.style,
       title: p.title,
-      custom_mode: true,
+      // custom_mode false on purpose. In custom mode the provider treats
+      // `prompt` strictly as the lyric sheet and sings it verbatim — which is
+      // how a guest's souvenir once sang our own creative brief back at them.
+      // Here `prompt` is the core idea and the provider writes the lyrics.
+      custom_mode: false,
       instrumental: false,
       model: "V6",
       negative_tags: p.negativeTags,
@@ -167,6 +171,31 @@ export interface TaskResult {
 }
 
 /**
+ * Pulls real lyrics out of a result, and refuses anything that is merely our own
+ * prompt handed back.
+ *
+ * This guard exists because of a specific bug: the souvenir page once showed an
+ * attendee our creative brief, instruction sentences and all, because the field
+ * that looked like lyrics was an echo of our input. A lyric sheet has section
+ * tags or line breaks; a brief is one block of prose. If it does not look sung,
+ * it does not get shown.
+ */
+function looksLikeLyrics(text: unknown): text is string {
+  if (typeof text !== "string") return false;
+  const t = text.trim();
+  if (t.length < 40) return false;
+  if (/\[(verse|chorus|bridge|intro|outro|pre-chorus|hook)/i.test(t)) return true;
+  return t.split(/\n/).filter((l) => l.trim().length > 0).length >= 4;
+}
+
+function pickLyrics(item: any): string | undefined {
+  for (const candidate of [item?.lyrics, item?.prompt]) {
+    if (looksLikeLyrics(candidate)) return candidate.trim();
+  }
+  return undefined;
+}
+
+/**
  * Polls one task. The provider returns results as a JSON *string* in
  * `resultJson`, and the music models nest tracks under `sunoData` while other
  * market models use a flat `resultUrls` array — both shapes are handled.
@@ -206,7 +235,7 @@ export async function getTaskResult(taskId: string): Promise<TaskResult> {
     imageUrl: first?.imageUrl ?? first?.image_url ?? undefined,
     // `first.prompt` is an echo of our own input, NOT a lyric sheet — never map
     // it here or the attendee is shown the instructions we sent the model.
-    lyrics: first?.lyrics ?? undefined,
+    lyrics: pickLyrics(first),
     // Floor, not round: the <audio> element reports whole seconds elapsed, so
     // rounding up makes the credits disagree with the player by a second.
     durationSec: first?.duration ? Math.floor(Number(first.duration)) : undefined,
