@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Download, Pause, Play, Share2 } from "lucide-react";
-import { ScoreMark, ScoreWordmark, Waveform, LiveWaveform } from "@/lib/brand";
+import { ScoreMark, ScoreWordmark, SoundField, Waveform, LiveWaveform } from "@/lib/brand";
 import { PRESET_MAP, type PresetId } from "@shared/presets";
 import type { PublicTrack } from "@shared/schema";
 
@@ -27,21 +27,17 @@ export default function TrackPage() {
   });
 
   const preset = data ? PRESET_MAP[data.preset as PresetId] : null;
-  const hue = preset?.accent ?? "122 100% 41%";
+  const hue = preset?.accent ?? "72 100% 50%";
 
   return (
     <div
-      className="relative min-h-screen bg-background text-foreground"
+      className="score-surface score-phone relative min-h-screen overflow-hidden bg-background text-foreground"
       style={{ ["--hue" as any]: hue }}
     >
-      <div className="desk-grid pointer-events-none absolute inset-0 opacity-60" />
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-72 opacity-50"
-        style={{ background: `radial-gradient(70% 100% at 50% 0%, hsl(${hue} / 0.3), transparent 70%)` }}
-      />
+      <SoundField quiet />
 
       <div className="relative mx-auto w-full max-w-lg px-6 py-8">
-        <ScoreWordmark />
+        <header className="score-header"><ScoreWordmark /></header>
 
         <div className="mt-10">
           {isLoading && <Skeleton />}
