@@ -353,33 +353,33 @@
 
 /* ==========================================================================
    "The Score" — HOOD Summit 2027 activation theme
-   Dark trading-desk studio: near-black surfaces, Robinhood green as the only
+   Cinematic studio: warm near-black surfaces, deck-inspired lime as the default
    default accent, per-preset accent hues injected at runtime via --accent-hue.
    Overrides the template defaults above; kiosk runs dark-only.
    ========================================================================== */
 :root,
 .dark {
-  --background: 0 0% 4%;
-  --foreground: 0 0% 98%;
-  --border: 0 0% 14%;
-  --card: 0 0% 7%;
-  --card-foreground: 0 0% 98%;
-  --card-border: 0 0% 15%;
+  --background: 80 7% 5%;
+  --foreground: 80 20% 97%;
+  --border: 65 9% 20%;
+  --card: 65 10% 8%;
+  --card-foreground: 80 20% 97%;
+  --card-border: 65 9% 22%;
   --popover: 0 0% 9%;
   --popover-foreground: 0 0% 98%;
   --popover-border: 0 0% 16%;
-  --primary: 122 100% 41%;
+  --primary: 72 100% 50%;
   --primary-foreground: 0 0% 4%;
   --secondary: 0 0% 12%;
   --secondary-foreground: 0 0% 98%;
   --muted: 0 0% 11%;
-  --muted-foreground: 0 0% 62%;
+  --muted-foreground: 65 7% 68%;
   --accent: 0 0% 13%;
   --accent-foreground: 0 0% 98%;
   --destructive: 4 90% 58%;
   --destructive-foreground: 0 0% 100%;
   --input: 0 0% 22%;
-  --ring: 122 100% 41%;
+  --ring: 72 100% 50%;
   --font-sans: 'Newsreader', Georgia, serif;
   --font-serif: 'Newsreader', Georgia, serif;
   --font-mono: 'IBM Plex Mono', Menlo, monospace;
@@ -390,7 +390,78 @@
   --opaque-button-border-intensity: 9;
 
   /* Overridden per preset so cards, glows and the waveform share one hue. */
-  --hue: 122 100% 41%;
+  --hue: 72 100% 50%;
+}
+
+/* Deck-inspired title sequence: soft sound rings, paper type, one lime signal.
+   Newsreader and the per-preset colors remain; no provider behavior is changed. */
+.score-surface { isolation: isolate; }
+.score-header {
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid hsl(var(--border));
+}
+.studio-label {
+  font: 400 0.75rem/1.5 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+.score-footer { border-top: 1px solid hsl(var(--border)); padding-top: 1.25rem; }
+.score-attract { position: relative; padding: 1rem 0; border-radius: 0.5rem; }
+.score-attract:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 0.5rem; }
+.score-kicker { display: flex; align-items: center; gap: 1.25rem; }
+.score-kicker i { display: block; width: clamp(2rem, 6vw, 6rem); height: 1px; background: hsl(var(--primary) / 0.7); }
+.score-title { margin-top: 1.75rem; font-weight: 400; text-wrap: balance; }
+.score-title span { display: block; }
+.score-title__intro { font-size: clamp(1.35rem, 2.4vw, 2rem); line-height: 1.25; }
+.score-title__word {
+  font-size: clamp(5rem, 13vw, 10rem);
+  line-height: 0.95;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  padding-left: 0.09em;
+  margin: 0.4rem 0 0.75rem;
+}
+.score-title__outro { font-size: clamp(1.75rem, 3.4vw, 2.75rem); line-height: 1.15; }
+.score-description { margin-top: 1.5rem; line-height: 1.55; }
+.score-cta { margin-top: 2rem; box-shadow: 0 0 32px hsl(var(--primary) / 0.08); }
+.score-ticker { margin-top: 2.5rem; }
+.score-section-label { display: flex; align-items: center; gap: 0.75rem; }
+.score-section-label::before { content: ""; width: 2rem; height: 1px; background: currentColor; }
+.score-preset { border-radius: 0.25rem; background: hsl(var(--card) / 0.94); }
+.score-preset:focus-visible { outline: 2px solid hsl(var(--hue)); outline-offset: 4px; }
+.score-phone .score-header { border-bottom-color: hsl(var(--primary) / 0.4); }
+
+.sound-field { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: -1; }
+.sound-field__rings {
+  position: absolute; left: 50%; top: 43%; width: min(86vw, 74rem);
+  aspect-ratio: 1; transform: translate(-50%, -50%);
+  opacity: 0.65; animation: sound-breathe 14s ease-in-out infinite alternate;
+  mask-image: linear-gradient(black 72%, transparent);
+}
+.sound-field__rings span {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 1px solid rgb(212 216 201 / 0.08);
+  box-shadow: inset 8px 5px 18px rgb(234 237 218 / 0.06),
+    inset -8px -5px 24px rgb(0 0 0 / 0.8), 4px 4px 28px rgb(223 225 209 / 0.055);
+}
+.sound-field__rings span:nth-child(2) { inset: 9%; }
+.sound-field__rings span:nth-child(3) { inset: 18%; }
+.sound-field__rings span:nth-child(4) { inset: 27%; }
+.sound-field--quiet .sound-field__rings { top: 8rem; left: 90%; opacity: 0.25; width: 42rem; animation: none; }
+@keyframes sound-breathe {
+  from { transform: translate(-50%, -50%) scale(0.98); opacity: 0.5; }
+  to { transform: translate(-50%, -50%) scale(1.035); opacity: 0.8; }
+}
+@media (max-width: 600px) {
+  .score-kicker { gap: 0.75rem; letter-spacing: 0.04em; }
+  .score-kicker i { width: 1.25rem; }
+  .score-title__word { font-size: clamp(4rem, 17vw, 6rem); letter-spacing: 0.045em; }
+  .score-footer { flex-wrap: wrap; font-size: 0.75rem; letter-spacing: 0.04em; }
+  .sound-field__rings { width: 150vw; top: 40%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sound-field__rings { animation: none; }
 }
 
 @layer utilities {
