@@ -1,5 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 
+/** Soft sound rings inspired by the deck's title-sequence direction.
+ * CSS-only, decorative, and independent of audio playback or remote assets. */
+export function SoundField({ quiet = false }: { quiet?: boolean }) {
+  return (
+    <div className={`sound-field${quiet ? " sound-field--quiet" : ""}`} aria-hidden="true">
+      <div className="sound-field__rings">
+        {[0, 1, 2, 3].map((ring) => <span key={ring} />)}
+      </div>
+    </div>
+  );
+}
+
 /**
  * "The Score" mark — a candlestick chart whose bars double as an audio
  * equalizer. One shape carries both meanings: the market score and the musical

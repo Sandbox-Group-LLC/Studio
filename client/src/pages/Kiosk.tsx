@@ -5,7 +5,7 @@ import QRCode from "qrcode";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScoreMark, ScoreWordmark, Waveform } from "@/lib/brand";
+import { ScoreMark, ScoreWordmark, SoundField, Waveform } from "@/lib/brand";
 import { PRESETS, PRESET_MAP, type Preset, type PresetId } from "@shared/presets";
 
 type Step = "attract" | "style" | "tune" | "you" | "handoff";
@@ -35,7 +35,7 @@ export default function Kiosk() {
   const [error, setError] = useState<string | null>(null);
 
   const preset: Preset | null = presetId ? PRESET_MAP[presetId] : null;
-  const hue = preset?.accent ?? "122 100% 41%";
+  const hue = preset?.accent ?? "72 100% 50%";
 
   const reset = () => {
     setStep("attract");
@@ -92,18 +92,15 @@ export default function Kiosk() {
 
   return (
     <div
-      className="kiosk-surface relative min-h-screen overflow-hidden bg-background text-foreground"
+      className={`kiosk-surface score-surface relative min-h-screen overflow-hidden bg-background text-foreground ${step === "attract" ? "is-attract" : ""}`}
       style={{ ["--hue" as any]: hue }}
     >
-      <div className="desk-grid pointer-events-none absolute inset-0 opacity-70" />
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[42vh] opacity-40 transition-colors duration-700"
-        style={{ background: `radial-gradient(60% 100% at 50% 0%, hsl(${hue} / 0.28), transparent 70%)` }}
-      />
+      <SoundField quiet={step !== "attract"} />
 
       <div className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col px-8 py-8 md:px-14 md:py-12">
-        <header className="flex items-center justify-between">
+        <header className="score-header flex items-center justify-between gap-4">
           <ScoreWordmark />
+          {step === "attract" && <span className="studio-label hidden sm:block">An original. By you.</span>}
           {step !== "attract" && (
             <button
               onClick={reset}
@@ -171,7 +168,7 @@ export default function Kiosk() {
           </motion.main>
         </AnimatePresence>
 
-        <footer className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+        <footer className="score-footer flex items-center justify-between gap-4 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
           <span>Sandbox XM · Experiential Studio</span>
           <StepDots step={step} />
         </footer>
@@ -205,27 +202,26 @@ function Attract({ onStart }: { onStart: () => void }) {
     <button
       onClick={onStart}
       data-testid="button-begin"
-      className="group flex flex-1 flex-col items-center justify-center text-center"
+      className="score-attract group flex flex-1 flex-col items-center justify-center text-center"
     >
-      <Waveform seed="attract-loop" bars={64} className="mb-12 h-24 w-full max-w-3xl opacity-80" />
+      <span className="studio-label score-kicker"><span>HOOD Studio</span><i /><span>Your session starts here</span></span>
 
-      <h1 className="max-w-4xl text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
-        Everyone has a
-        <span className="text-hue"> score</span>.
-        <br />
-        Let's hear yours.
+      <h1 className="score-title">
+        <span className="score-title__intro">Everyone has a</span>{" "}
+        <span className="score-title__word">score.</span>{" "}
+        <span className="score-title__outro">Let's hear yours.</span>
       </h1>
 
-      <p className="mt-7 max-w-2xl text-lg text-muted-foreground md:text-xl">
+      <p className="score-description max-w-lg text-lg text-muted-foreground">
         Four taps turns the way you invest into an original track. Yours to keep.
       </p>
 
-      <span className="mt-14 inline-flex items-center gap-3 rounded-full bg-hue px-9 py-4 text-base font-semibold text-background transition-transform duration-200 group-active:scale-[0.97]">
+      <span className="score-cta inline-flex items-center gap-5 rounded-full bg-hue px-8 py-4 text-base font-semibold text-background transition-transform duration-200 group-active:scale-[0.97]">
         Tap anywhere to begin <ArrowRight className="h-5 w-5" />
       </span>
 
-      <div className="mt-16 w-full max-w-4xl overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]">
-        <div className="flex w-max animate-ticker gap-10 font-mono text-[11px] uppercase tracking-[0.3em] text-muted-foreground">
+      <div className="score-ticker w-full max-w-3xl overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]">
+        <div className="flex w-max animate-ticker gap-10 font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
           {[...TICKER, ...TICKER, ...TICKER, ...TICKER].map((t, i) => (
             <span key={i} className="flex items-center gap-10">
               {t}
@@ -243,7 +239,7 @@ function Attract({ onStart }: { onStart: () => void }) {
 function StepHeading({ index, title, sub }: { index: string; title: string; sub?: string }) {
   return (
     <div className="mb-10">
-      <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.28em] text-hue">{index}</div>
+      <div className="score-section-label mb-3 font-mono text-xs uppercase tracking-[0.24em] text-hue">{index}</div>
       <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">{title}</h2>
       {sub && <p className="mt-3 max-w-2xl text-base text-muted-foreground md:text-lg">{sub}</p>}
     </div>
@@ -265,7 +261,7 @@ function StepStyle({ onPick }: { onPick: (id: PresetId) => void }) {
             onClick={() => onPick(p.id)}
             data-testid={`button-preset-${p.id}`}
             style={{ ["--hue" as any]: p.accent }}
-            className="group relative overflow-hidden rounded-xl border border-card-border bg-card p-7 text-left transition-all duration-200 hover-elevate active:scale-[0.99]"
+            className="score-preset group relative overflow-hidden rounded-xl border border-card-border bg-card p-7 text-left transition-all duration-200 hover-elevate active:scale-[0.99]"
           >
             <div
               className="absolute inset-x-0 top-0 h-px opacity-70"

@@ -10,6 +10,8 @@ they invest, and walks away with an original two-minute track written for them.
 > creators.
 
 Full creative rationale lives in [SPEC.md](./SPEC.md).
+The October 2026 deck-derived visual direction, alternative treatments, and styling
+QA notes live in [docs/deck-styling.md](./docs/deck-styling.md).
 
 ---
 
