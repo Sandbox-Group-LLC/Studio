@@ -207,9 +207,12 @@ function Attract({ onStart }: { onStart: () => void }) {
       <span className="studio-label score-kicker"><span>HOOD Studio</span><i /><span>Your session starts here</span></span>
 
       <h1 className="score-title">
-        <span className="score-title__intro">Everyone has a</span>{" "}
-        <span className="score-title__word">score.</span>{" "}
-        <span className="score-title__outro">Let's hear yours.</span>
+        <img
+          src="/score-title.png"
+          alt="Everyone has a score. Let's hear yours."
+          className="score-title-img"
+          draggable={false}
+        />
       </h1>
 
       <p className="score-description max-w-lg text-lg text-muted-foreground">
