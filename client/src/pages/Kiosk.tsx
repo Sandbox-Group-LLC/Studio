@@ -168,10 +168,11 @@ export default function Kiosk() {
           </motion.main>
         </AnimatePresence>
 
-        <footer className="score-footer flex items-center justify-between gap-4 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
-          <span>Sandbox XM · Experiential Studio</span>
-          <StepDots step={step} />
-        </footer>
+        {step !== "attract" && (
+          <footer className="score-footer flex items-center justify-end gap-4 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
+            <StepDots step={step} />
+          </footer>
+        )}
       </div>
     </div>
   );
@@ -180,7 +181,6 @@ export default function Kiosk() {
 function StepDots({ step }: { step: Step }) {
   const order: Step[] = ["style", "tune", "you", "handoff"];
   const idx = order.indexOf(step);
-  if (idx < 0) return <span>Tap to begin</span>;
   return (
     <div className="flex items-center gap-2" aria-label={`Step ${idx + 1} of 4`}>
       {order.map((s, i) => (
