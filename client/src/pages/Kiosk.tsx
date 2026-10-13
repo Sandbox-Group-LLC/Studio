@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, RotateCcw, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Camera, Check, Play, RotateCcw, Sparkles } from "lucide-react";
 import QRCode from "qrcode";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -551,6 +551,10 @@ function Handoff({
   onDone: () => void;
 }) {
   const [qr, setQr] = useState<string | null>(null);
+  const [photoStaged, setPhotoStaged] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const demoActive = pickerOpen || photoStaged;
   const url = useMemo(() => `${window.location.origin}${window.location.pathname}#/t/${claimCode}`, [claimCode]);
 
   useEffect(() => {
@@ -565,10 +569,53 @@ function Handoff({
   }, [url]);
 
   // Auto-return to attract so the next guest never faces someone else's screen.
+  // Paused while a demo interaction is in flight (photo picker open, photo staged)
+  // so a host never watches the booth reset mid-demo.
   useEffect(() => {
+    if (demoActive) return;
     const t = window.setTimeout(onDone, 45_000);
     return () => window.clearTimeout(t);
-  }, [onDone]);
+  }, [onDone, demoActive]);
+
+  // Watchdog for the demo photo picker: native file dialogs give the input no
+  // cancel event (and React's input types carry no onCancel), so re-arm the
+  // auto-return from window focus once the dialog closes — with a hard cap so
+  // the booth can never strand on an open picker. Demo-only, dies with the block.
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const cap = window.setTimeout(() => setPickerOpen(false), 60_000);
+    const onFocus = () => window.setTimeout(() => setPickerOpen(false), 750);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearTimeout(cap);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [pickerOpen]);
+
+  // Demo-only: stash a downscaled cover photo for this claim code. No backend,
+  // no persistence — sessionStorage dies with the tab, and every piece of this
+  // is marked data-demo for removal before the event.
+  const stagePhoto = async (file: File) => {
+    try {
+      const objectUrl = URL.createObjectURL(file);
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const el = new Image();
+        el.onload = () => resolve(el);
+        el.onerror = reject;
+        el.src = objectUrl;
+      });
+      const scale = Math.min(1, 1200 / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(objectUrl);
+      sessionStorage.setItem(`score:demo-photo:${claimCode}`, canvas.toDataURL("image/jpeg", 0.85));
+      setPhotoStaged(true);
+    } catch {
+      setPhotoStaged(false);
+    }
+  };
 
   return (
     <div className="grid items-center gap-12 lg:grid-cols-[1.1fr_1fr]">
@@ -620,6 +667,43 @@ function Handoff({
         </div>
         <div className="mt-5 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
           {preset.label} · Scan to claim
+        </div>
+
+        {/* Demo-only shortcuts — remove before the event (grep data-demo). */}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3" data-demo="handoff-shortcuts">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onClick={() => setPickerOpen(true)}
+            onChange={(e) => {
+              setPickerOpen(false);
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) void stagePhoto(file);
+            }}
+          />
+          <button
+            onClick={() => fileRef.current?.click()}
+            data-testid="button-demo-photo"
+            className={`inline-flex items-center gap-2 rounded-full border px-6 py-3 text-sm font-medium transition-all duration-200 active:scale-[0.97] ${
+              photoStaged ? "border-hue text-hue" : "border-border text-muted-foreground hover-elevate"
+            }`}
+          >
+            <Camera className="h-4 w-4" />
+            {photoStaged ? "Photo ready" : "Use my photo"}
+          </button>
+          <button
+            onClick={() => {
+              sessionStorage.setItem("score:demo-from-kiosk", "1");
+              window.location.hash = `/t/${claimCode}`;
+            }}
+            data-testid="button-demo-song"
+            className="inline-flex items-center gap-2 rounded-full bg-hue px-6 py-3 text-sm font-semibold text-background transition-all duration-200 active:scale-[0.97]"
+          >
+            <Play className="h-4 w-4" /> Get my song
+          </button>
         </div>
       </div>
     </div>
