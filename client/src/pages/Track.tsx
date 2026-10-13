@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Pause, Play, Share2 } from "lucide-react";
+import { ArrowLeft, Download, Pause, Play, Share2 } from "lucide-react";
 import { ScoreMark, ScoreWordmark, SoundField, Waveform, LiveWaveform } from "@/lib/brand";
 import { PRESET_MAP, type PresetId } from "@shared/presets";
 import type { PublicTrack } from "@shared/schema";
@@ -15,6 +15,16 @@ const API_BASE = "__PORT_5000__".startsWith("__") ? "" : "__PORT_5000__";
 export default function TrackPage() {
   const { code } = useParams<{ code: string }>();
   const claimCode = (code || "").toUpperCase();
+
+  // Demo-only: set by the kiosk's "Get my song" shortcut. Shows the way back
+  // so a host can return the screen to the booth without typing. data-demo.
+  const demoFromKiosk = useMemo(() => {
+    try {
+      return sessionStorage.getItem("score:demo-from-kiosk") === "1";
+    } catch {
+      return false;
+    }
+  }, []);
 
   const { data, isLoading, isError } = useQuery<PublicTrack>({
     queryKey: ["/api/tracks", claimCode],
@@ -38,6 +48,19 @@ export default function TrackPage() {
 
       <div className="relative mx-auto w-full max-w-lg px-6 py-8">
         <header className="score-header"><ScoreWordmark /></header>
+
+        {demoFromKiosk && (
+          <button
+            onClick={() => {
+              sessionStorage.removeItem("score:demo-from-kiosk");
+              window.location.hash = "/";
+            }}
+            data-demo="back-to-kiosk"
+            className="mt-4 inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover-elevate"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to kiosk
+          </button>
+        )}
 
         <div className="mt-10">
           {isLoading && <Skeleton />}
@@ -165,6 +188,17 @@ function Player({ track, claimCode }: { track: PublicTrack; claimCode: string })
   const [audioError, setAudioError] = useState(false);
   const src = `${API_BASE}/api/tracks/${claimCode}/audio`;
 
+  // Demo-only: the photo staged at the kiosk, if any, wins over the generated
+  // cover. data-demo — remove with the kiosk shortcut block.
+  const demoPhoto = useMemo(() => {
+    try {
+      return sessionStorage.getItem(`score:demo-photo:${claimCode}`);
+    } catch {
+      return null;
+    }
+  }, [claimCode]);
+  const cover = demoPhoto || track.imageUrl;
+
   // Playback state is driven by the element's own events, never assumed from
   // the click — a rejected play() must not leave a pause icon on screen.
   const toggle = async () => {
@@ -212,12 +246,13 @@ function Player({ track, claimCode }: { track: PublicTrack; claimCode: string })
       </p>
 
       <div className="mt-7 overflow-hidden rounded-xl border border-card-border bg-card">
-        {track.imageUrl && (
+        {cover && (
           <img
-            src={track.imageUrl}
+            src={cover}
             alt=""
             className="h-52 w-full object-cover opacity-90"
-            crossOrigin="anonymous"
+            crossOrigin={demoPhoto ? undefined : "anonymous"}
+            data-demo={demoPhoto ? "cover" : undefined}
           />
         )}
 
